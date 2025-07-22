@@ -4,13 +4,6 @@ import { FileItem } from "./fileItem";
 import path = require("path");
 
 export class FileItemManager {
-  parseUriIfString(uriOr: vscode.Uri | string): vscode.Uri {
-    if (typeof uriOr === "string") {
-      return vscode.Uri.parse(uriOr);
-    }
-    return uriOr;
-  }
-
   isValidUri(uriOr: vscode.Uri | string | undefined): boolean {
     if (uriOr === undefined) {
       return false;
@@ -20,28 +13,33 @@ export class FileItemManager {
     
     return fs.existsSync(filePath);
   }
-
-  validateIfWin32Path(pathToCheck: string, scheme = '/'): vscode.Uri {
-    const win32LocalDiskLabelArray = ['C','D','E','F','G','H','I','J','K','L','M','N'];
-    
-    let validatedPath = pathToCheck;
-    if (process.platform === 'win32'
-      && !fs.statSync(pathToCheck).isDirectory()
-      && !win32LocalDiskLabelArray.some((v, i , _) => pathToCheck.startsWith(v)))
-    {
-      const pathArray = win32LocalDiskLabelArray.map((v, i, _) => {
-        const realPath = `${v}:${pathToCheck}`;
-        if (fs.existsSync(realPath)) {
-          return realPath;
-        }
-      }).filter((v, i, _) => v !== undefined);
-      
-      validatedPath = pathArray.length > 0 ? pathArray[0] as string : pathToCheck;
+  
+  private parseUriIfString(uriOr: vscode.Uri | string): vscode.Uri {
+    if (typeof uriOr === "string") {
+      return vscode.Uri.parse(uriOr);
     }
-    const fixedPath = validatedPath.replace(/(^|[^\\])(\\+)(?=[^\\]|$)/g, '$1\\\\');
-    validatedPath = fixedPath.startsWith(scheme) ? fixedPath : `${scheme}//${fixedPath}`;
+    return uriOr;
+  }
+
+  private tryValidatePath(path: string, scheme = '/'): string {
+    const fixedPath = path.replace(/\\+/g, '\/');
+    return fixedPath.startsWith(scheme) ? fixedPath : `${scheme}${fixedPath}`;
+  }
+
+  private validateIfWin32Path(path: string): vscode.Uri {
+    const win32LocalDiskLabels = ['C','D','E','F','G','H','I','J','K','L','M','N'];
     
-    return vscode.Uri.parse(validatedPath);
+    let fixedPath = path;
+    if (process.platform === 'win32' && !win32LocalDiskLabels.some((v, i , _) => path.startsWith(v))) {
+      const pathArray = win32LocalDiskLabels.map((v, i, _) => {
+        const realPath = `${v}:${path}`;
+        return fs.existsSync(realPath) ? realPath : undefined; }
+      ).filter((v, i, _) => v !== undefined);
+      
+      fixedPath = pathArray.length > 0 ? pathArray[0] as string : path;
+    }
+
+    return vscode.Uri.parse(this.tryValidatePath(fixedPath));
   }
 
   createFileItem(uriOr: vscode.Uri | string): FileItem {

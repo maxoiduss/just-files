@@ -21,21 +21,21 @@ export class FileItemManager {
     return fs.existsSync(filePath);
   }
 
-  validateIfWin32Path(path: string, scheme = '/'): vscode.Uri {
+  validateIfWin32Path(pathToCheck: string, scheme = '/'): vscode.Uri {
     const win32LocalDiskLabelArray = ['C','E','F','G','H','I','J','K','L','M','N'];
     
-    let validatedPath = path;
+    let validatedPath = pathToCheck;
     if (process.platform === 'win32'
-      && !win32LocalDiskLabelArray.some((v, i , _) => path.startsWith(v)))
+      && !win32LocalDiskLabelArray.some((v, i , _) => pathToCheck.startsWith(v)))
     {
       const pathArray = win32LocalDiskLabelArray.map((v, i, _) => {
-        const realPath = `${v}:${path}`;
+        const realPath = `${v}:${pathToCheck}`;
         if (fs.existsSync(realPath)) {
           return realPath;
         }
       }).filter((v, i, _) => v !== undefined);
       
-      validatedPath = pathArray.length > 0 ? pathArray[0] : path;
+      validatedPath = pathArray.length > 0 ? pathArray[0] as string : pathToCheck;
     }
     const fixedPath = validatedPath.replace(/(^|[^\\])(\\+)(?=[^\\]|$)/g, '$1\\\\');
     validatedPath = fixedPath.startsWith(scheme) ? fixedPath : `${scheme}//${fixedPath}`;

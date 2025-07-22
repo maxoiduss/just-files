@@ -1,30 +1,53 @@
 import * as vscode from "vscode";
+import * as fs from "fs";
 import { FileItem } from "./fileItem";
 import path = require("path");
-import * as fs from "fs";
 
 export class FileItemManager {
-  isValidUri(uri: vscode.Uri | string | undefined): boolean {
-    if (uri === undefined) {
+  parseUriIfString(uriOr: vscode.Uri | string): vscode.Uri {
+    if (typeof uriOr === "string") {
+      return vscode.Uri.parse(uriOr);
+    }
+    return uriOr;
+  }
+
+  isValidUri(uriOr: vscode.Uri | string | undefined): boolean {
+    if (uriOr === undefined) {
       return false;
     }
-
-    if (typeof uri === "string") {
-      uri = vscode.Uri.parse(uri);
-    }
-
+    const uri = this.parseUriIfString(uriOr);
     const filePath = uri.fsPath;
-
+    
     return fs.existsSync(filePath);
   }
 
-  createFileItem(uri: vscode.Uri | string): FileItem {
-    if (typeof uri === "string") {
-      uri = vscode.Uri.parse(uri);
+  validateIfWin32Path(path: string, scheme = '/'): vscode.Uri {
+    const win32LocalDiskLabelArray = ['C','E','F','G','H','I','J','K','L','M','N'];
+    
+    let validatedPath = path;
+    if (process.platform === 'win32'
+      && !win32LocalDiskLabelArray.some((v, i , _) => path.startsWith(v)))
+    {
+      const pathArray = win32LocalDiskLabelArray.map((v, i, _) => {
+        const realPath = `${v}:${path}`;
+        if (fs.existsSync(realPath)) {
+          return realPath;
+        }
+      }).filter((v, i, _) => v !== undefined);
+      
+      validatedPath = pathArray.length > 0 ? pathArray[0] : path;
     }
-    const filePath = uri.fsPath;
+    const fixedPath = validatedPath.replace(/(^|[^\\])(\\+)(?=[^\\]|$)/g, '$1\\\\');
+    validatedPath = fixedPath.startsWith(scheme) ? fixedPath : `${scheme}//${fixedPath}`;
+    
+    return vscode.Uri.parse(validatedPath);
+  }
 
-    if (fs.existsSync(filePath)) {
+  createFileItem(uriOr: vscode.Uri | string): FileItem {
+    const fspath = this.parseUriIfString(uriOr).fsPath;
+    const uri = this.validateIfWin32Path(fspath);
+    if (this.isValidUri(uri))
+    {
       const label = path.basename(uri.fsPath);
       const isFile = fs.statSync(uri.fsPath).isFile();
       const collapsibleState = fs.statSync(uri.fsPath).isDirectory()

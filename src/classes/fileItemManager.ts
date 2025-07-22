@@ -22,7 +22,7 @@ export class FileItemManager {
   }
 
   validateIfWin32Path(pathToCheck: string, scheme = '/'): vscode.Uri {
-    const win32LocalDiskLabelArray = ['C','E','F','G','H','I','J','K','L','M','N'];
+    const win32LocalDiskLabelArray = ['C','D','E','F','G','H','I','J','K','L','M','N'];
     
     let validatedPath = pathToCheck;
     if (process.platform === 'win32'

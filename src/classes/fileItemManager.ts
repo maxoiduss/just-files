@@ -26,6 +26,7 @@ export class FileItemManager {
     
     let validatedPath = pathToCheck;
     if (process.platform === 'win32'
+      && !fs.statSync(pathToCheck).isDirectory()
       && !win32LocalDiskLabelArray.some((v, i , _) => pathToCheck.startsWith(v)))
     {
       const pathArray = win32LocalDiskLabelArray.map((v, i, _) => {
